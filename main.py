@@ -51,17 +51,77 @@ def SampleGenerate(popSize, num):
 
 		if len(even) % 2 == 1:
 			extra = 1
-			extraeven = next(x for x in even if x >= threshold)
+			tempindex = numpy.array(numpy.argwhere(even >= threshold))
+			extraeven = even[tempindex[0]]
+			even = numpy.delete(even, tempindex[0])
+		extra = 0
 		i = 1
-		NodeCell = None
+		NodeCell = []
 		# Check for initial combination
-		while len(numpy.where(even >= threshold)) > 0:
-			temp = next(x for x in even if x >= threshold)
-			even = numpy.where(even != temp)
-			print(even)
-	return(extraeven)
+		while len(numpy.argwhere(even >= threshold)) > 0:
+			tempindex = numpy.array(numpy.argwhere(even >= threshold))
+			temp = even[tempindex[0]]
+			even = numpy.delete(even, tempindex[0])
+			if len(even) >0:
+				temp = numpy.append(temp, even[0])
+				even = numpy.delete(even, 0)
+			if temp[len(temp)-1] >= threshold:
+				temp = numpy.append(temp, even[0])
+				even = numpy.delete(even, 0)
+			temp = temp.tolist()
+			if i == 0:
+				NodeCell = numpy.empty((1,), dtype = object)
+				NodeCell[0] = temp
+			else:
+				NodeCell = numpy.append(NodeCell, numpy.empty((1,), dtype = object))
+				NodeCell[len(NodeCell)-1] = temp
+			i = i + 1
 
-test = SampleGenerate(5,8)
+		while len(even) > 0:
+			NodeCell = numpy.append(NodeCell, numpy.empty((1,), dtype = object))
+			temp = even[0]
+			temp = temp.tolist()
+			NodeCell[len(NodeCell)-1] = temp
+			even = numpy.delete(even, 0)
+
+		while len(numpy.argwhere(odd < threshold)) > 0:
+			tempindex = numpy.array(numpy.argwhere(odd < threshold))
+			temp = odd[tempindex[0]]
+			odd = numpy.delete(odd, tempindex[0])
+			if len(odd) > 0:
+				temp = numpy.append(temp, odd[0])
+				odd = numpy.delete(odd, 0)
+
+			if temp[len(temp)-1] < threshold:
+				temp = numpy.append(temp, odd[0])
+				odd = numpy.delete(odd, 0)
+			temp = temp.tolist()
+			NodeCell = numpy.append(NodeCell, numpy.empty((1,), dtype = object))
+			NodeCell[len(NodeCell)-1] = temp
+
+		while len(odd) > 0:
+			NodeCell = numpy.append(NodeCell, numpy.empty((1,), dtype = object))
+			temp = odd[0]
+			temp = temp.tolist()
+			NodeCell[len(NodeCell)-1] = temp
+			odd = numpy.delete(odd, 0)	
+		
+		len_NodeCell = len(NodeCell)
+		ord_NodeCell = numpy.random.permutation(len_NodeCell)
+		NodeList = []
+		print(NodeCell)
+		for i in range(0, len_NodeCell):
+			temp = numpy.asarray(NodeCell[ord_NodeCell[i]])
+			NodeList = numpy.append(NodeList, temp)
+
+		if extra == 1:
+			NodeList = numpy.append(NodeList, extraeven)
+
+	return(NodeList)
+
+
+
+test = SampleGenerate(1,10)
 print(test)
 
 
