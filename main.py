@@ -9,6 +9,7 @@
 import pandas as pd
 import numpy
 
+
 #Read data from csv; Set input variables
 csv_data = pd.read_csv('I20.csv')  
 location_city = csv_data.iloc[:, 1:3]
@@ -16,7 +17,7 @@ location_cities = location_city.values
 num_city = len(csv_data)
 #Set parameters
 maxGen = 5 * num_city + 25
-popSize = 5
+popSize = 2
 crossoverP = 0.1
 mutationP = 0.9
 
@@ -41,20 +42,18 @@ def SampleGenerate(popSize, num):
 	# Define necessary parameters
 	n = num - 2
 	pop = numpy.zeros(shape = (popSize, num))
-	pop[:,0] = 1
-	pop[:, num-1] = num
 	threshold = num/2
-	for i in range(0, popSize):
+	for j in range(0, popSize):
 		cdd = numpy.random.permutation(n) + 2
 		even = cdd[numpy.array(cdd % 2 ==0,dtype='bool')]
 		odd = cdd[numpy.array(cdd % 2 ==1,dtype='bool')]
+		extra = 0
 
 		if len(even) % 2 == 1:
 			extra = 1
 			tempindex = numpy.array(numpy.argwhere(even >= threshold))
 			extraeven = even[tempindex[0]]
 			even = numpy.delete(even, tempindex[0])
-		extra = 0
 		i = 1
 		NodeCell = []
 		# Check for initial combination
@@ -109,20 +108,77 @@ def SampleGenerate(popSize, num):
 		len_NodeCell = len(NodeCell)
 		ord_NodeCell = numpy.random.permutation(len_NodeCell)
 		NodeList = []
-		print(NodeCell)
 		for i in range(0, len_NodeCell):
 			temp = numpy.asarray(NodeCell[ord_NodeCell[i]])
 			NodeList = numpy.append(NodeList, temp)
 
 		if extra == 1:
 			NodeList = numpy.append(NodeList, extraeven)
+		NodeList = numpy.append(NodeList, num)
+		NodeList = numpy.append(1, NodeList)
+		pop[j,:] = NodeList
+		pop = pop.astype(int)
 
-	return(NodeList)
+	return(pop)
+
+
+def fitness(Dis, pop, gen):
+	popSize = numpy.shape(pop)[0]
+	col = numpy.shape(pop)[1]
+	sumDistance = numpy.zeros(shape = (popSize, 1))
+	subDistance = numpy.zeros(shape = (popSize, col-1))
+	for i in range(0, popSize):
+		for j in range(0, col-1):
+			subDistance[i,j] = Dis[pop[i,j]-1, pop[i,j+1]-1]
+			sumDistance[i] = sumDistance[i] + subDistance[i,j]
+	L = numpy.max(Dis)
+	maxDis = numpy.max(subDistance, axis = 1)
+	minDis = numpy.min(subDistance, axis = 1)
+	Delta = maxDis - minDis
+	FunctionalValuePart = 0
+
+	if gen <= 10:
+		maxDisbench = numpy.max(subDistance, axis = 1)
+		minDisbench = numpy.min(subDistance, axis = 1)
+		Deltabench = maxDisbench - minDisbench
+		FunctionalValuePart = sumDistance + Deltabench * (col-2) * L
+
+	if gen <= 5 * col and gen > 10:
+		BenchSize = gen // 10 + col // 2
+		startbench = random.randint(0, col-benchSize+1)
+		endbench = startbench + BenchSize - 1
+		maxDisbench = numpy.max(subDistance[:, startbench:endbench], axis = 1)
+		minDisbench = numpy.min(subDistance[:, startbench:endbench], axis = 1)
+		Deltabench = maxDisbench - minDisbench
+		FunctionalValuePart = sumDistance + Deltabench * (col-2) * L
+
+	if gen > 5 * col:
+		FunctionalValuePart = sumDistance + Delta * (col-2) * L
+
+	FunctionalValue = sumDistance + Delta * (col-2) * L
+
+	return subDistance, sumDistance, Delta, FunctionalValuePart, FunctionalValue
+
+
+offspring = numpy.zeros(shape=(popSize, num_city))
+
+minPathes = numpy.zeros(shape=(maxGen ,1))
+minDistance = numpy.zeros(shape=(maxGen ,1))
+minFvPath = numpy.zeros(shape=(maxGen, num_city))
+minFv = numpy.zeros(shape=(maxGen ,1))
+minDelta = numpy.zeros(shape=(maxGen, 1))
+
+# To Obtain Each Generations Iteratively
 
 
 
-test = SampleGenerate(1,10)
-print(test)
+gen = 1
+pop = SampleGenerate(popSize,num_city)
+subDistance, sumDistance, Delta, FunctionValuePart, FunctionValue = fitness(DisMa, pop, gen)
+#print(subDistance)
+print(subDistance)
+
+
 
 
 
