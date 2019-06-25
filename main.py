@@ -8,17 +8,18 @@
 
 import pandas as pd
 import numpy
-
-
+import random
+import copy
 #Read data from csv; Set input variables
 csv_data = pd.read_csv('I20.csv')  
 location_city = csv_data.iloc[:, 1:3]
 location_cities = location_city.values
 num_city = len(csv_data)
 #Set parameters
-maxGen = 5 * num_city + 25
-popSize = 2
-crossoverP = 0.1
+#maxGen = 5 * num_city + 25
+maxGen = 1
+popSize = 20
+crossoverP = 0.9
 mutationP = 0.9
 
 gbest = None
@@ -37,6 +38,7 @@ DisMa = calculateDis(location_cities, num_city)
 print("Until now is good! God bless you...")
 
 # Sample Generate
+
 
 def SampleGenerate(popSize, num):
 	# Define necessary parameters
@@ -120,7 +122,7 @@ def SampleGenerate(popSize, num):
 		pop = pop.astype(int)
 
 	return(pop)
-
+pop = SampleGenerate(popSize,num_city)
 
 def fitness(Dis, pop, gen):
 	popSize = numpy.shape(pop)[0]
@@ -135,21 +137,24 @@ def fitness(Dis, pop, gen):
 	maxDis = numpy.max(subDistance, axis = 1)
 	minDis = numpy.min(subDistance, axis = 1)
 	Delta = maxDis - minDis
+	Delta = Delta.reshape(Delta.shape[0], 1)
 	FunctionalValuePart = 0
 
 	if gen <= 10:
 		maxDisbench = numpy.max(subDistance, axis = 1)
 		minDisbench = numpy.min(subDistance, axis = 1)
 		Deltabench = maxDisbench - minDisbench
+		Deltabench = Deltabench.reshape(Deltabench.shape[0], 1)
 		FunctionalValuePart = sumDistance + Deltabench * (col-2) * L
 
 	if gen <= 5 * col and gen > 10:
 		BenchSize = gen // 10 + col // 2
-		startbench = random.randint(0, col-benchSize+1)
+		startbench = random.randint(0, col-BenchSize+1)
 		endbench = startbench + BenchSize - 1
 		maxDisbench = numpy.max(subDistance[:, startbench:endbench], axis = 1)
 		minDisbench = numpy.min(subDistance[:, startbench:endbench], axis = 1)
 		Deltabench = maxDisbench - minDisbench
+		Deltabench = Deltabench.reshape(Deltabench.shape[0], 1)
 		FunctionalValuePart = sumDistance + Deltabench * (col-2) * L
 
 	if gen > 5 * col:
@@ -158,6 +163,66 @@ def fitness(Dis, pop, gen):
 	FunctionalValue = sumDistance + Delta * (col-2) * L
 
 	return subDistance, sumDistance, Delta, FunctionalValuePart, FunctionalValue
+
+
+
+def crossover(parent1Path, parent2Path, crossoverP):
+	subparent1Path = copy.deepcopy(parent1Path[1:len(parent1Path)-1])
+	subparent2Path = copy.deepcopy(parent2Path[1:len(parent2Path)-1])	
+
+	n = len(subparent1Path)
+	threshold = n/2 + 1
+	cross_rand = random.uniform(0, 1)
+	childPath = numpy.zeros(shape = (n)) 
+	parent1Part = 0
+	p1 = 0
+	if crossoverP >= cross_rand:
+		setSize = n//2
+		offset = random.randint(1, setSize)
+		endset = setSize + offset - 1
+		childPath[offset-1:endset] = copy.deepcopy(subparent1Path[offset-1:endset])
+		account = endset
+		for i in range(0, n):
+			if any(childPath == subparent2Path[i]):
+				subparent2Path[i] = 0
+		subparent2Path = [x for x in subparent2Path if x !=0]
+		parent1Part = numpy.zeros(shape = (n-setSize))
+		parent1Part[0:offset-1] = copy.deepcopy(subparent1Path[0:offset-1])
+		parent1Part[offset-1:len(parent1Part)] = copy.deepcopy(subparent1Path[endset:len(subparent1Path)])
+		subparent2Path = numpy.asarray(subparent2Path)
+		p1 = subparent2Path[numpy.array(numpy.argwhere((subparent2Path % 2 == 0) & (subparent2Path >= threshold)))]
+		p1index = numpy.array(numpy.argwhere((parent1Part % 2 == 0) & (parent1Part >= threshold)))
+		for i in range(0, len(p1)):
+			parent1Part[p1index[i]] = p1[i]
+		p2 = subparent2Path[numpy.array(numpy.argwhere((subparent2Path % 2 == 0) & (subparent2Path < threshold)))]
+		p2index = numpy.array(numpy.argwhere((parent1Part % 2 == 0) & (parent1Part < threshold)))
+		for i in range(0, len(p2)):
+			parent1Part[p2index[i]] = p2[i]
+		p3 = subparent2Path[numpy.array(numpy.argwhere((subparent2Path % 2 == 1) & (subparent2Path >= threshold)))]
+		p3index = numpy.array(numpy.argwhere((parent1Part % 2 == 1) & (parent1Part >= threshold)))
+		for i in range(0, len(p3)):
+			parent1Part[p3index[i]] = p3[i]
+		p4 = subparent2Path[numpy.array(numpy.argwhere((subparent2Path % 2 == 1) & (subparent2Path < threshold)))]
+		p4index = numpy.array(numpy.argwhere((parent1Part % 2 == 1) & (parent1Part < threshold)))
+		for i in range(0, len(p4)):
+			parent1Part[p4index[i]] = p4[i]
+
+		childPath[0:offset-1] = parent1Part[0:offset-1]
+		childPath[endset:len(childPath)] = parent1Part[offset-1:len(parent1Part)]
+	else:
+		childPath = parent1Path
+	childPath = numpy.append(childPath, n+2)
+	childPath = numpy.append(1, childPath)
+	return(childPath)
+
+def mutate(path, mutationP):
+	subPath = copy.deepcopy(path[1:len(path)-1])
+	n = len(subPath)
+	mutate_rand = random.uniform(0, 1)
+	threshold = n/2 + 1
+	
+
+	return subPath
 
 
 offspring = numpy.zeros(shape=(popSize, num_city))
@@ -170,13 +235,25 @@ minDelta = numpy.zeros(shape=(maxGen, 1))
 
 # To Obtain Each Generations Iteratively
 
-
-
-gen = 1
-pop = SampleGenerate(popSize,num_city)
-subDistance, sumDistance, Delta, FunctionValuePart, FunctionValue = fitness(DisMa, pop, gen)
-#print(subDistance)
-print(subDistance)
+for gen in range(0, maxGen):
+	subDistance, sumDistance, Delta, FunctionValuePart, FunctionValue = fitness(DisMa, pop, gen)
+	tournamentSize = 4
+	for k in range(1, popSize):
+		tourPopDistance = numpy.zeros(shape = (tournamentSize, 1))
+		for i in range(0, tournamentSize):
+			randomRow = random.randint(0, popSize-1)
+			tourPopDistance[i] = FunctionValuePart[randomRow, 0]
+		parent1 = numpy.min(tourPopDistance)
+		parent1X = numpy.array(numpy.argwhere(FunctionValuePart == parent1))
+		parent1_Path = pop[parent1X[0,0],:]
+		for i in range(0, tournamentSize):
+			randomRow = random.randint(0, popSize-1)
+			tourPopDistance[i] = FunctionValuePart[randomRow, 0]
+		parent2 = numpy.min(tourPopDistance)
+		parent2X = numpy.array(numpy.argwhere(FunctionValuePart == parent2))
+		parent2_Path = pop[parent2X[0,0],:]		
+		subPath = crossover(parent1_Path,parent2_Path,crossoverP)
+		subPath = mutate(subPath, mutationP)
 
 
 
